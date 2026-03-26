@@ -1,138 +1,119 @@
 :root {
     --gold: #D4AF37;
     --white: #ffffff;
-    --glass: rgba(255, 255, 255, 0.15);
-    --border: rgba(255, 255, 255, 0.3);
+    --text-dark: #1a1a1a;
+    --glass: rgba(255, 255, 255, 0.2);
+    --glass-border: rgba(255, 255, 255, 0.4);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-    background: #0a0a0a;
-    color: var(--white);
+    background: #f4f4f4;
     font-family: 'Inter', sans-serif;
+    color: var(--text-dark);
     height: 100vh;
     overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
 }
 
-/* 1. ANIMATED BACKGROUND */
+/* 1. THE AURA BACKGROUND */
 .aura-bg {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
     z-index: -1;
-    filter: blur(100px);
-    overflow: hidden;
+    filter: blur(80px);
+}
+.blob { position: absolute; width: 600px; height: 600px; border-radius: 50%; animation: float 15s infinite alternate; }
+.gold { background: rgba(212, 175, 55, 0.2); top: -10%; left: -10%; }
+.white { background: rgba(255, 255, 255, 0.8); bottom: -10%; right: -10%; animation-delay: -5s; }
+
+@keyframes float {
+    from { transform: translate(0,0); }
+    to { transform: translate(50px, 50px); }
 }
 
-.blob {
-    position: absolute;
-    width: 500px; height: 500px;
-    border-radius: 50%;
-    animation: move 20s infinite alternate;
+/* 2. LAYOUT */
+.container {
+    max-width: 1000px;
+    height: 90vh;
+    margin: 5vh auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 0 20px;
 }
 
-.gold { background: rgba(212, 175, 55, 0.3); top: -10%; left: -10%; }
-.white { background: rgba(255, 255, 255, 0.2); bottom: -10%; right: -10%; animation-delay: -5s; }
+.header { display: flex; justify-content: space-between; align-items: center; }
+.logo { font-weight: 700; letter-spacing: 2px; color: var(--gold); }
+.logo span { color: #555; font-weight: 300; }
 
-@keyframes move {
-    from { transform: translate(0, 0) scale(1); }
-    to { transform: translate(100px, 100px) scale(1.2); }
-}
+.status-dot { width: 12px; height: 12px; border-radius: 50%; background: #ccc; transition: 0.3s; }
+.status-dot.active { background: var(--gold); box-shadow: 0 0 15px var(--gold); }
 
-/* 2. GLASS CONTAINERS */
-.glass {
+/* 3. GLASSMORPHISM */
+.glass-box {
     background: var(--glass);
-    backdrop-filter: blur(25px);
-    -webkit-backdrop-filter: blur(25px);
-    border: 1px solid var(--border);
-    border-radius: 24px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
 }
 
-.main-interface {
-    width: 90%; max-width: 1100px;
-    height: 85vh;
-    display: flex; flex-direction: column; gap: 20px;
-}
+.listener-section { padding: 20px; min-height: 100px; }
+.label { font-size: 0.75rem; color: var(--gold); margin-bottom: 10px; letter-spacing: 1px; }
+#live-text { font-size: 1.1rem; color: #444; font-style: italic; }
 
-/* 3. HEADER */
-.glass-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 10px 20px;
-}
-
-.logo {
-    font-family: 'Cinzel Decorative', cursive;
-    font-size: 1.5rem; letter-spacing: 4px; color: var(--gold);
-}
-
-.logo span { color: white; opacity: 0.6; }
-
-.status-glow {
-    width: 15px; height: 15px; border-radius: 50%;
-    background: #333; transition: 0.5s;
-}
-
-.status-glow.active {
-    background: var(--gold);
-    box-shadow: 0 0 20px var(--gold), 0 0 40px var(--gold);
-}
-
-/* 4. SCRIPTURE STAGE */
-.stage {
+.display-stage {
     flex: 1;
-    position: relative;
-    display: flex; justify-content: center; align-items: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     text-align: center;
+    position: relative;
     padding: 40px;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 30px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* FULL SCREEN MODE STYLES */
-.stage:fullscreen {
-    background: #000;
+/* FULL SCREEN LOGIC */
+.display-stage:fullscreen {
+    background: white;
     width: 100vw; height: 100vh;
     display: flex; justify-content: center; align-items: center;
 }
 
-.stage:fullscreen .icon-btn { top: 20px; right: 20px; opacity: 0.2; }
-
 #reference-title {
-    font-family: 'Cinzel Decorative', cursive;
-    font-size: 3.5rem; color: var(--gold);
+    font-family: 'Playfair Display', serif;
+    font-size: 3rem;
+    color: var(--gold);
     margin-bottom: 20px;
-    text-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
 }
 
 #verse-content {
-    font-family: 'Playfair Display', serif;
-    font-size: 2.2rem; line-height: 1.4;
-    font-weight: 400; letter-spacing: 0.5px;
+    font-size: 1.8rem;
+    line-height: 1.5;
+    font-weight: 300;
 }
 
-/* 5. BUTTONS */
-.glass-controls {
-    display: flex; gap: 20px; justify-content: center;
+.placeholder-text { font-size: 1.5rem; color: #bbb; font-style: italic; }
+
+/* 4. BUTTONS */
+.controls { display: flex; gap: 15px; justify-content: center; }
+
+button {
+    padding: 12px 30px;
+    border-radius: 50px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
 }
 
-.action-btn {
-    padding: 15px 40px; border-radius: 12px;
-    border: none; font-weight: 600; cursor: pointer;
-    transition: 0.3s; text-transform: uppercase; letter-spacing: 2px;
-}
+#start-btn { background: var(--gold); color: white; }
+#clear-btn { background: white; border: 1px solid var(--gold); color: var(--gold); }
 
-.start { background: var(--gold); color: black; }
-.clear { background: transparent; border: 1px solid var(--gold); color: var(--gold); }
-
-.action-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.4); }
-
-.icon-btn {
-    position: absolute; top: 20px; right: 20px;
+.fs-icon {
+    position: absolute; bottom: 20px; right: 20px;
     background: none; border: none; color: var(--gold);
-    cursor: pointer; transition: 0.3s;
+    cursor: pointer; opacity: 0.5;
 }
+.fs-icon:hover { opacity: 1; }

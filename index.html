@@ -3,38 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rhema Script | Live Scripture Listener</title>
+    <title>Rhema Script | Divine Edition</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <main class="app-container">
-        <header class="glass-header">
-            <h1 class="logo">Rhema<span>Script</span></h1>
+    <div class="divine-wrapper">
+        <header class="heavenly-header">
+            <div class="logo">RHEMA <span>SCRIPT</span></div>
             <div id="status-indicator" class="status-dot"></div>
         </header>
 
-        <section class="scripture-display glass-card">
-            <div id="verse-output">
-                <p id="placeholder" class="placeholder-text">Waiting for the Word...</p>
-                <h2 id="reference-title"></h2>
-                <blockquote id="verse-content"></blockquote>
-            </div>
+        <section class="transcript-container">
+            <span class="label">LIVE LISTENER</span>
+            <div id="live-text" class="interim-text">Waiting for the Word...</div>
         </section>
 
-        <section class="transcription-box glass-card">
-            <p class="label">Live Listener</p>
-            <div class="scrolling-text">
-                <span id="live-text">Ready to listen...</span>
-            </div>
-        </section>
+        <main class="scripture-stage">
+            <div id="placeholder" class="watermark">“Faith comes by hearing...”</div>
+            
+            <article class="verse-card">
+                <h1 id="reference-title" class="gold-text"></h1>
+                <p id="verse-content" class="scripture-text"></p>
+            </article>
+        </main>
 
-        <footer class="controls glass-footer">
+        <footer class="control-bar">
             <button id="start-btn" class="btn-primary">Start Listening</button>
-            <button id="clear-btn" class="btn-secondary">Clear Screen</button>
+            <button id="clear-btn" class="btn-outline">Clear Screen</button>
         </footer>
-    </main>
+    </div>
 
     <script src="script.js"></script>
 </body>

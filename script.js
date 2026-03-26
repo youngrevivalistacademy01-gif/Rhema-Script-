@@ -1,6 +1,6 @@
 /**
- * Rhema Script - Natural Language Engine
- * High-performance extraction for "John Chapter 3 Verse 16" or "John 3,16"
+ * Rhema Script - Professional Bible Engine
+ * Full 66-Book Dataset + Multi-Book Logic (1 Sam, 2 Sam, etc.)
  */
 
 const startBtn = document.getElementById('start-btn');
@@ -11,20 +11,30 @@ const referenceTitle = document.getElementById('reference-title');
 const statusDot = document.getElementById('status-indicator');
 const placeholder = document.getElementById('placeholder');
 
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recognition;
-
-if (SpeechRecognition) {
-    recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-}
+const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
+let recognition = new SpeechRecognition();
+recognition.continuous = true;
+recognition.interimResults = true;
 
 let isListening = false;
-let lastFetched = ""; 
+let lastFetched = "";
 
-// 1. UI Controls
+// --- THE SOURCE OF TRUTH (All 66 Books) ---
+const bibleBooks = [
+    "1st samuel", "2nd samuel", "1st kings", "2nd kings", "1st chronicles", "2nd chronicles", 
+    "1st corinthians", "2nd corinthians", "1st thessalonians", "2nd thessalonians", 
+    "1st timothy", "2nd timothy", "1st peter", "2nd peter", "1st john", "2nd john", "3rd john",
+    "genesis", "exodus", "leviticus", "numbers", "deuteronomy", "joshua", "judges", "ruth", 
+    "samuel", "kings", "chronicles", "ezra", "nehemiah", "esther", "job", "psalms", "psalm", 
+    "proverbs", "ecclesiastes", "song of solomon", "isaiah", "jeremiah", "lamentations", 
+    "ezekiel", "daniel", "hosea", "joel", "amos", "obadiah", "jonah", "micah", "nahum", 
+    "habakkuk", "zephaniah", "haggai", "zechariah", "malachi", "matthew", "mark", "luke", 
+    "john", "acts", "romans", "corinthians", "galatians", "ephesians", "philippians", 
+    "colossians", "thessalonians", "timothy", "titus", "philemon", "hebrews", "james", 
+    "peter", "jude", "revelation"
+];
+
+// 1. Controls
 startBtn.addEventListener('click', () => {
     if (!isListening) {
         recognition.start();
@@ -43,52 +53,54 @@ function updateUI(active) {
     if (active) statusDot.classList.add('active'); else statusDot.classList.remove('active');
 }
 
-// 2. Real-time Listener
+// 2. The Logic Fix
 recognition.onresult = (event) => {
     let transcript = "";
     for (let i = event.resultIndex; i < event.results.length; ++i) {
-        transcript = event.results[i][0].transcript;
-        liveText.textContent = transcript; 
+        transcript = event.results[i][0].transcript.toLowerCase();
+        // Replace spoken "1st" or "first" with "1" for the API
+        transcript = transcript.replace(/first/g, "1").replace(/second/g, "2").replace(/third/g, "3");
+        liveText.textContent = transcript;
         processSpeech(transcript);
     }
 };
 
-// 3. THE "HUMAN" ENGINE: This is the fix you needed
 function processSpeech(text) {
-    // Standardize: "John Chapter 3, Verse 16" -> "john chapter 3 verse 16"
-    const input = text.toLowerCase().replace(/,/g, " ");
+    // 1. Clean the text of punctuation
+    const cleanText = text.replace(/,/g, " ").replace(/:/g, " ");
 
-    // List of Bible Books (Shortened for logic example, but covers most common)
-    const books = ["genesis", "exodus", "leviticus", "numbers", "deuteronomy", "joshua", "judges", "ruth", "samuel", "kings", "chronicles", "ezra", "nehemiah", "esther", "job", "psalms", "psalm", "proverbs", "ecclesiastes", "isaiah", "jeremiah", "lamentations", "ezekiel", "daniel", "hosea", "joel", "amos", "obadiah", "jonah", "micah", "nahum", "habakkuk", "zephaniah", "haggai", "zechariah", "malachi", "matthew", "mark", "luke", "john", "acts", "romans", "corinthians", "galatians", "ephesians", "philippians", "colossians", "thessalonians", "timothy", "titus", "philemon", "hebrews", "james", "peter", "jude", "revelation"];
+    // 2. Find the Book
+    let foundBook = "";
+    for (let book of bibleBooks) {
+        // We check for "1 samuel" or "samuel"
+        let searchPattern = book.replace("1st", "1").replace("2nd", "2").replace("3rd", "3");
+        if (cleanText.includes(searchPattern)) {
+            foundBook = searchPattern;
+            break; 
+        }
+    }
 
-    // Step 1: Find if a book name is mentioned
-    let foundBook = books.find(book => input.includes(book));
     if (!foundBook) return;
 
-    // Step 2: Extract all numbers in the order they were spoken
-    // This finds "3" and "16" even if "chapter" and "verse" are between them
-    const numbers = input.match(/\d+/g);
+    // 3. Get numbers that appear AFTER the book name
+    const afterBook = cleanText.split(foundBook)[1];
+    if (!afterBook) return;
+
+    const numbers = afterBook.match(/\d+/g);
 
     if (numbers && numbers.length >= 2) {
         const chapter = numbers[0];
         const verse = numbers[1];
-        
-        // Handle "1 John" or "2 Samuel" cases
-        let finalBook = foundBook;
-        if (input.includes(`1 ${foundBook}`)) finalBook = `1 ${foundBook}`;
-        if (input.includes(`2 ${foundBook}`)) finalBook = `2 ${foundBook}`;
-        if (input.includes(`3 ${foundBook}`)) finalBook = `3 ${foundBook}`;
+        const ref = `${foundBook} ${chapter}:${verse}`;
 
-        const formattedRef = `${finalBook} ${chapter}:${verse}`;
-
-        if (formattedRef !== lastFetched) {
-            lastFetched = formattedRef;
-            fetchVerse(formattedRef);
+        if (ref !== lastFetched) {
+            lastFetched = ref;
+            fetchVerse(ref);
         }
     }
 }
 
-// 4. Fetching Logic
+// 3. API Fetch
 async function fetchVerse(ref) {
     try {
         const url = `https://bible-api.com/${encodeURIComponent(ref)}?translation=kjv`;
@@ -99,7 +111,6 @@ async function fetchVerse(ref) {
             placeholder.style.display = 'none';
             referenceTitle.textContent = data.reference;
             verseContent.textContent = data.text;
-            liveText.textContent = `Pushed: ${data.reference}`;
         }
     } catch (err) {
         console.error("API Error", err);
@@ -112,6 +123,5 @@ clearBtn.addEventListener('click', () => {
     referenceTitle.textContent = "";
     verseContent.textContent = "";
     placeholder.style.display = 'block';
-    liveText.textContent = "Ready.";
     lastFetched = "";
 });

@@ -1,6 +1,6 @@
 /**
- * Rhema Script - Professional Bible Engine (Final Build)
- * Fixes: Clear Screen Logic, Multiple Book Detection, and Natural Speech
+ * Rhema Script - Perceptive Preacher Edition
+ * Fixes: Long pauses, unclear book pronunciation, and multiple book logic.
  */
 
 const startBtn = document.getElementById('start-btn');
@@ -13,14 +13,16 @@ const placeholder = document.getElementById('placeholder');
 
 const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
 let recognition = new SpeechRecognition();
+
+// CRITICAL: Keep results continuous so pauses don't break the sentence
 recognition.continuous = true;
 recognition.interimResults = true;
+recognition.lang = 'en-US';
 
 let isListening = false;
 let lastFetched = "";
-let isCoolingDown = false; // Prevents "Clear" from being immediately overwritten
+let sessionTranscript = ""; // Accumulates speech to handle long pauses
 
-// 1. DATASET: Ordered so multi-books are checked FIRST
 const bibleBooks = [
     "1 samuel", "2 samuel", "1 kings", "2 kings", "1 chronicles", "2 chronicles", 
     "1 corinthians", "2 corinthians", "1 thessalonians", "2 thessalonians", 
@@ -35,7 +37,7 @@ const bibleBooks = [
     "peter", "jude", "revelation"
 ];
 
-// 2. CONTROLS
+// 1. Controls
 startBtn.addEventListener('click', () => {
     if (!isListening) {
         recognition.start();
@@ -49,49 +51,52 @@ startBtn.addEventListener('click', () => {
         startBtn.textContent = "Start Listening";
         startBtn.style.background = "#a855f7";
         statusDot.classList.remove('active');
+        sessionTranscript = ""; 
     }
 });
 
-// 3. SMART LISTENER
+// 2. The Smart Listener
 recognition.onresult = (event) => {
-    if (isCoolingDown) return; // Stop processing if screen was just cleared
-
-    let transcript = "";
+    let interim = "";
     for (let i = event.resultIndex; i < event.results.length; ++i) {
-        transcript = event.results[i][0].transcript.toLowerCase();
-        
-        // Normalize common speech variations
-        transcript = transcript
-            .replace(/first/g, "1")
-            .replace(/second/g, "2")
-            .replace(/third/g, "3")
-            .replace(/1st/g, "1")
-            .replace(/2nd/g, "2")
-            .replace(/3rd/g, "3")
-            .replace(/,/g, " "); // Fixes the "Genesis 1,1" issue
-
-        liveText.textContent = transcript;
-        processSpeech(transcript);
+        let text = event.results[i][0].transcript.toLowerCase();
+        if (event.results[i].isFinal) {
+            sessionTranscript += " " + text;
+        } else {
+            interim = text;
+        }
     }
+
+    // Combine long-term memory with current speaking for matching
+    const fullText = (sessionTranscript + " " + interim).trim();
+    liveText.textContent = fullText.split(' ').slice(-10).join(' '); // Show last 10 words
+    
+    processSpeech(fullText);
 };
 
 function processSpeech(text) {
+    // A. Clean and Normalize
+    const clean = text.replace(/first/g, "1").replace(/second/g, "2").replace(/third/g, "3")
+                      .replace(/1st/g, "1").replace(/2nd/g, "2").replace(/3rd/g, "3")
+                      .replace(/,/g, " ").replace(/chapter|verse|verses|and/gi, " ");
+
+    // B. Smart Book Match (Handles slight mispronunciations)
     let foundBook = "";
     for (let book of bibleBooks) {
-        // Use word boundaries to ensure "John" doesn't match inside "1 John"
-        if (text.includes(book)) {
+        // Using "includes" allows for "revelations" to match "revelation"
+        if (clean.includes(book)) {
             foundBook = book;
-            break; 
+            break;
         }
     }
 
     if (!foundBook) return;
 
-    // Isolate text AFTER the book name to get Chapter/Verse
-    const speechAfterBook = text.split(foundBook)[1];
-    if (!speechAfterBook) return;
-
-    const numbers = speechAfterBook.match(/\d+/g);
+    // C. Number Extraction from the whole session
+    const parts = clean.split(foundBook);
+    const afterBook = parts[parts.length - 1]; // Look at the most recent mention
+    
+    const numbers = afterBook.match(/\d+/g);
 
     if (numbers && numbers.length >= 2) {
         const chapter = numbers[0];
@@ -101,11 +106,13 @@ function processSpeech(text) {
         if (ref !== lastFetched) {
             lastFetched = ref;
             fetchVerse(ref);
+            // Clear session transcript after a successful fetch to keep it fresh
+            sessionTranscript = ""; 
         }
     }
 }
 
-// 4. API ENGINE
+// 3. API Engine
 async function fetchVerse(ref) {
     try {
         const url = `https://bible-api.com/${encodeURIComponent(ref)}?translation=kjv`;
@@ -116,33 +123,24 @@ async function fetchVerse(ref) {
             placeholder.style.display = 'none';
             referenceTitle.textContent = data.reference;
             verseContent.textContent = data.text;
+            
+            // Smoothly show content
+            verseContent.style.opacity = 0;
+            setTimeout(() => { verseContent.style.opacity = 1; }, 50);
         }
     } catch (err) {
         console.error("API Error");
     }
 }
 
-// 5. IMPROVED CLEAR LOGIC
+// 4. Clear Logic
 clearBtn.addEventListener('click', () => {
-    // Enable cooldown so the old transcript doesn't instantly re-trigger the verse
-    isCoolingDown = true;
-    
     referenceTitle.textContent = "";
     verseContent.textContent = "";
     placeholder.style.display = 'block';
-    lastFetched = ""; // Allow the same verse to be searched again later
-    liveText.textContent = "Screen Cleared.";
-
-    // Restart the recognition to clear its internal buffer/memory
-    if (isListening) {
-        recognition.stop();
-        setTimeout(() => {
-            if (isListening) recognition.start();
-            isCoolingDown = false;
-        }, 1000);
-    } else {
-        setTimeout(() => { isCoolingDown = false; }, 1000);
-    }
+    lastFetched = "";
+    sessionTranscript = "";
+    liveText.textContent = "Ready.";
 });
 
-recognition.onend = () => { if (isListening && !isCoolingDown) recognition.start(); };
+recognition.onend = () => { if (isListening) recognition.start(); };

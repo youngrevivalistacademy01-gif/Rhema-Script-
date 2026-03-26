@@ -1,12 +1,12 @@
 /**
- * Rhema Script - Core Logic
- * Role: Listen, Parse, Fetch, and Display
+ * Rhema Script - Master Logic
+ * Optimized for Live Sermons & Professional Deployment
  */
 
-// 1. Initialize Speech Recognition (Cross-browser support)
+// 1. Initialize Speech Recognition
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (!SpeechRecognition) {
-    alert("Your browser does not support Web Speech API. Please use Chrome or Edge.");
+    alert("Speech API not supported. Please use Chrome or Edge on HTTPS.");
 }
 
 const recognition = new SpeechRecognition();
@@ -25,55 +25,122 @@ const placeholder = document.querySelector('.placeholder-text');
 
 let isListening = false;
 
-// 3. Toggle Listening Functionality
+// 3. Toggle Listener
 startBtn.addEventListener('click', () => {
     if (!isListening) {
-        try {
-            recognition.start();
-            updateUIState(true);
-        } catch (err) {
-            console.error("Speech recognition error:", err);
-        }
+        recognition.start();
+        updateUI(true);
     } else {
         recognition.stop();
-        updateUIState(false);
+        updateUI(false);
     }
     isListening = !isListening;
 });
 
-function updateUIState(active) {
+function updateUI(active) {
     if (active) {
         startBtn.textContent = "Stop Listening";
-        startBtn.style.background = "#ef4444"; // Red for "Stop"
+        startBtn.style.background = "#ef4444";
         statusDot.classList.add('active');
-        liveText.textContent = "Mic active. Speak a verse...";
+        liveText.textContent = "Waiting for the Word...";
     } else {
         startBtn.textContent = "Start Listening";
-        startBtn.style.background = "#a855f7"; // Purple for "Start"
+        startBtn.style.background = "#a855f7";
         statusDot.classList.remove('active');
-        liveText.textContent = "Listener paused.";
     }
 }
 
-// 4. Handle Voice Results
+// 4. Processing Voice Input
 recognition.onresult = (event) => {
-    let finalTranscript = '';
     let interimTranscript = '';
-
     for (let i = event.resultIndex; i < event.results.length; ++i) {
+        const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-            processSpeech(finalTranscript.toLowerCase());
+            console.log("Final Speech:", transcript);
+            processSpeech(transcript);
         } else {
-            interimTranscript += event.results[i][0].transcript;
+            interimTranscript += transcript;
         }
     }
+    liveText.textContent = interimTranscript || "Listening...";
+};
+
+// 5. Advanced Scripture Detection (The "Brain")
+function processSpeech(text) {
+    // Clean common spoken words: "John chapter 3 verse 16" -> "john 3 16"
+    const clean = text.toLowerCase()
+                      .replace(/chapter|verse|and|the/gi, " ")
+                      .replace(/\s+/g, " ")
+                      .trim();
+
+    // Regex Explanation: 
+    // ([1-3]?\s?[a-z]+) -> Matches "John" or "1 John"
+    // \s?(\d+) -> Matches Chapter number
+    // [\s|:]?\s?(\d+) -> Matches Verse number (with space or colon)
+    const regex = /([1-3]?\s?[a-z]+)\s?(\d+)[\s|:]?\s?(\d+)/gi;
     
-    // Show the "live" text so the user sees it's working
-    if (interimTranscript) {
-        liveText.textContent = interimTranscript;
+    let match;
+    while ((match = regex.exec(clean)) !== null) {
+        const book = match[1].trim();
+        const chapter = match[2];
+        const verse = match[3];
+        
+        const formattedRef = `${book} ${chapter}:${verse}`;
+        console.log("Detected Reference:", formattedRef);
+        fetchVerse(formattedRef);
+    }
+}
+
+// 6. Fetching from Bible API
+async function fetchVerse(ref) {
+    liveText.textContent = `Pulling ${ref}...`;
+    
+    try {
+        // Encode URL to handle spaces in book names (like "1 John")
+        const url = `https://bible-api.com/${encodeURIComponent(ref)}?translation=kjv`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.text) {
+            displayResults(data.reference, data.text);
+        } else {
+            console.warn("API found no text for:", ref);
+        }
+    } catch (err) {
+        console.error("API Error:", err);
+        liveText.textContent = "Connection error. Try again.";
+    }
+}
+
+// 7. Display Logic
+function displayResults(ref, text) {
+    placeholder.style.display = 'none';
+    
+    // UI Refresh
+    referenceTitle.style.opacity = 0;
+    verseContent.style.opacity = 0;
+
+    setTimeout(() => {
+        referenceTitle.textContent = ref;
+        verseContent.textContent = text;
+        referenceTitle.style.opacity = 1;
+        verseContent.style.opacity = 1;
+        liveText.textContent = "Listening for next verse...";
+    }, 300);
+}
+
+// 8. Auto-Restart (Crucial for live sermons)
+recognition.onend = () => {
+    if (isListening) {
+        console.log("Restarting listener...");
+        recognition.start();
     }
 };
 
-Display
- */
+// 9. Clear Screen
+clearBtn.addEventListener('click', () => {
+    referenceTitle.textContent = "";
+    verseContent.textContent = "";
+    placeholder.style.display = 'block';
+    liveText.textContent = "Ready.";
+});

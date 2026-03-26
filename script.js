@@ -1,6 +1,6 @@
 /**
- * Rhema Script - Professional Bible Engine
- * Full 66-Book Dataset + Multi-Book Logic (1 Sam, 2 Sam, etc.)
+ * Rhema Script - Universal Natural Language Engine
+ * Handles: "John 3 16", "John chapter 3 verse 16", "2nd Samuel 1 1", etc.
  */
 
 const startBtn = document.getElementById('start-btn');
@@ -19,11 +19,11 @@ recognition.interimResults = true;
 let isListening = false;
 let lastFetched = "";
 
-// --- THE SOURCE OF TRUTH (All 66 Books) ---
+// 1. DATASET: Ordered by complexity (Multiple books MUST come first)
 const bibleBooks = [
-    "1st samuel", "2nd samuel", "1st kings", "2nd kings", "1st chronicles", "2nd chronicles", 
-    "1st corinthians", "2nd corinthians", "1st thessalonians", "2nd thessalonians", 
-    "1st timothy", "2nd timothy", "1st peter", "2nd peter", "1st john", "2nd john", "3rd john",
+    "1 samuel", "2 samuel", "1 kings", "2 kings", "1 chronicles", "2 chronicles", 
+    "1 corinthians", "2 corinthians", "1 thessalonians", "2 thessalonians", 
+    "1 timothy", "2 timothy", "1 peter", "2 peter", "1 john", "2 john", "3 john",
     "genesis", "exodus", "leviticus", "numbers", "deuteronomy", "joshua", "judges", "ruth", 
     "samuel", "kings", "chronicles", "ezra", "nehemiah", "esther", "job", "psalms", "psalm", 
     "proverbs", "ecclesiastes", "song of solomon", "isaiah", "jeremiah", "lamentations", 
@@ -34,65 +34,70 @@ const bibleBooks = [
     "peter", "jude", "revelation"
 ];
 
-// 1. Controls
+// 2. CONTROLS
 startBtn.addEventListener('click', () => {
     if (!isListening) {
         recognition.start();
         isListening = true;
-        updateUI(true);
+        startBtn.textContent = "Stop Listening";
+        startBtn.style.background = "#ef4444";
+        statusDot.classList.add('active');
     } else {
         recognition.stop();
         isListening = false;
-        updateUI(false);
+        startBtn.textContent = "Start Listening";
+        startBtn.style.background = "#a855f7";
+        statusDot.classList.remove('active');
     }
 });
 
-function updateUI(active) {
-    startBtn.textContent = active ? "Stop Listening" : "Start Listening";
-    startBtn.style.background = active ? "#ef4444" : "#a855f7";
-    if (active) statusDot.classList.add('active'); else statusDot.classList.remove('active');
-}
-
-// 2. The Logic Fix
+// 3. SMART LISTENER
 recognition.onresult = (event) => {
     let transcript = "";
     for (let i = event.resultIndex; i < event.results.length; ++i) {
         transcript = event.results[i][0].transcript.toLowerCase();
-        // Replace spoken "1st" or "first" with "1" for the API
-        transcript = transcript.replace(/first/g, "1").replace(/second/g, "2").replace(/third/g, "3");
+        
+        // Normalize common speech variations
+        transcript = transcript
+            .replace(/first/g, "1")
+            .replace(/second/g, "2")
+            .replace(/third/g, "3")
+            .replace(/1st/g, "1")
+            .replace(/2nd/g, "2")
+            .replace(/3rd/g, "3");
+
         liveText.textContent = transcript;
         processSpeech(transcript);
     }
 };
 
 function processSpeech(text) {
-    // 1. Clean the text of punctuation
-    const cleanText = text.replace(/,/g, " ").replace(/:/g, " ");
-
-    // 2. Find the Book
+    // A. Find the book name in the text
     let foundBook = "";
     for (let book of bibleBooks) {
-        // We check for "1 samuel" or "samuel"
-        let searchPattern = book.replace("1st", "1").replace("2nd", "2").replace("3rd", "3");
-        if (cleanText.includes(searchPattern)) {
-            foundBook = searchPattern;
-            break; 
+        if (text.includes(book)) {
+            foundBook = book;
+            break; // Stop at the first match (e.g., "1 samuel" before "samuel")
         }
     }
 
     if (!foundBook) return;
 
-    // 3. Get numbers that appear AFTER the book name
-    const afterBook = cleanText.split(foundBook)[1];
-    if (!afterBook) return;
+    // B. Isolate everything spoken AFTER the book name
+    // This prevents the "2" in "2 Samuel" from being used as a Chapter number
+    const speechAfterBook = text.split(foundBook)[1];
+    if (!speechAfterBook) return;
 
-    const numbers = afterBook.match(/\d+/g);
+    // C. Extract ALL numbers from the remaining text
+    // This finds "3" and "16" regardless of "chapter", "verse", or "verses"
+    const numbers = speechAfterBook.match(/\d+/g);
 
     if (numbers && numbers.length >= 2) {
         const chapter = numbers[0];
         const verse = numbers[1];
         const ref = `${foundBook} ${chapter}:${verse}`;
 
+        // D. Only fetch if it's a new reference to avoid flickering
         if (ref !== lastFetched) {
             lastFetched = ref;
             fetchVerse(ref);
@@ -100,7 +105,7 @@ function processSpeech(text) {
     }
 }
 
-// 3. API Fetch
+// 4. API ENGINE
 async function fetchVerse(ref) {
     try {
         const url = `https://bible-api.com/${encodeURIComponent(ref)}?translation=kjv`;
@@ -111,17 +116,21 @@ async function fetchVerse(ref) {
             placeholder.style.display = 'none';
             referenceTitle.textContent = data.reference;
             verseContent.textContent = data.text;
+            console.log("Success:", data.reference);
         }
     } catch (err) {
-        console.error("API Error", err);
+        console.error("API Connection Error");
     }
 }
 
+// Restart if preacher pauses
 recognition.onend = () => { if (isListening) recognition.start(); };
 
+// Clear Logic
 clearBtn.addEventListener('click', () => {
     referenceTitle.textContent = "";
     verseContent.textContent = "";
     placeholder.style.display = 'block';
     lastFetched = "";
+    liveText.textContent = "Cleared.";
 });

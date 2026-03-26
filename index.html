@@ -5,42 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connect | Rhema Script</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;600;800&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <div class="aura-bg">
-        <div class="blob gold"></div>
-        <div class="blob white"></div>
+    <div class="glow-container">
+        <div class="glow-orb purple"></div>
+        <div class="glow-orb indigo"></div>
     </div>
 
-    <div class="container">
-        <header class="header">
+    <div class="app-container">
+        <header class="main-header">
             <div class="logo">RHEMA <span>SCRIPT</span></div>
-            <div id="status-indicator" class="status-dot"></div>
+            <div id="status-indicator" class="status-pulse"></div>
         </header>
 
-        <section class="glass-box listener-section">
+        <section class="glass-panel listener-box">
             <h2 class="label">LIVE LISTENER</h2>
             <div id="live-text">Waiting for speaking...</div>
         </section>
 
-        <main class="glass-box display-stage" id="scripture-stage">
-            <div id="placeholder" class="placeholder-text">“Faith comes by hearing...”</div>
+        <main class="glass-panel display-stage" id="scripture-stage">
+            <div id="placeholder" class="watermark">“Faith comes by hearing...”</div>
             
-            <div class="verse-container">
+            <div class="verse-wrapper">
                 <h1 id="reference-title"></h1>
                 <p id="verse-content"></p>
             </div>
 
-            <button id="fullscreen-btn" class="fs-icon" title="Full Screen Mode">
-                <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+            <button id="fullscreen-btn" class="fs-trigger">
+                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
             </button>
         </main>
 
-        <footer class="controls">
-            <button id="start-btn">Start Listening</button>
-            <button id="clear-btn">Clear Screen</button>
+        <footer class="bottom-controls">
+            <button id="start-btn" class="btn-main">Start Listening</button>
+            <button id="clear-btn" class="btn-sub">Clear Screen</button>
         </footer>
     </div>
 

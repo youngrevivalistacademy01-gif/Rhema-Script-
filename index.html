@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rhema Omni | Visionary Edition</title>
+    <title>Connect | Rhema Script</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;600&family=Cinzel+Decorative:wght@700&family=Playfair+Display:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -14,37 +14,36 @@
         <div class="blob white"></div>
     </div>
 
-    <div class="main-interface" id="main-ui">
-        <header class="glass-header">
-            <div class="logo">RHEMA<span>OMNI</span></div>
-            <div id="status-indicator" class="status-glow"></div>
+    <div class="container">
+        <header class="header">
+            <div class="logo">RHEMA <span>SCRIPT</span></div>
+            <div id="status-indicator" class="status-dot"></div>
         </header>
 
-        <div class="live-monitor glass">
-            <span class="tag">ANGELIC LISTENER</span>
-            <div id="live-text">Waiting for the breath of the Word...</div>
-        </div>
+        <section class="glass-box listener-section">
+            <h2 class="label">LIVE LISTENER</h2>
+            <div id="live-text">Waiting for speaking...</div>
+        </section>
 
-        <section class="stage" id="scripture-stage">
-            <div id="placeholder" class="reveal-text">“Speak, Lord, for your servant is listening.”</div>
+        <main class="glass-box display-stage" id="scripture-stage">
+            <div id="placeholder" class="placeholder-text">“Faith comes by hearing...”</div>
             
-            <div class="verse-display">
-                <h1 id="reference-title" class="shimmer-text"></h1>
+            <div class="verse-container">
+                <h1 id="reference-title"></h1>
                 <p id="verse-content"></p>
             </div>
 
-            <button id="fullscreen-btn" class="icon-btn" title="Enter Preach Mode">
+            <button id="fullscreen-btn" class="fs-icon" title="Full Screen Mode">
                 <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
             </button>
-        </section>
+        </main>
 
-        <footer class="glass-controls">
-            <button id="start-btn" class="action-btn start">Initialize Listener</button>
-            <button id="clear-btn" class="action-btn clear">Reset Stage</button>
+        <footer class="controls">
+            <button id="start-btn">Start Listening</button>
+            <button id="clear-btn">Clear Screen</button>
         </footer>
     </div>
 
     <script src="script.js"></script>
 </body>
 </html>
-

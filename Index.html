@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rhema Script | Live Scripture Listener</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <main class="app-container">
+        <header class="glass-header">
+            <h1 class="logo">Rhema<span>Script</span></h1>
+            <div id="status-indicator" class="status-dot"></div>
+        </header>
+
+        <section class="scripture-display glass-card">
+            <div id="verse-output">
+                <p class="placeholder-text">Waiting for the Word...</p>
+                <h2 id="reference-title"></h2>
+                <blockquote id="verse-content"></blockquote>
+            </div>
+        </section>
+
+        <section class="transcription-box glass-card">
+            <p class="label">Live Listener</p>
+            <div id="live-text" class="scrolling-text">Listening for scripture references...</div>
+        </section>
+
+        <footer class="controls glass-footer">
+            <button id="start-btn" class="btn-primary">Start Listening</button>
+            <button id="clear-btn" class="btn-secondary">Clear Screen</button>
+        </footer >
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>

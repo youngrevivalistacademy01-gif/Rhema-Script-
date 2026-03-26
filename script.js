@@ -1,12 +1,20 @@
-// 1. Initialize Speech Recognition
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-const recognition = new SpeechRecognition();
+/**
+ * Rhema Script - Core Logic
+ * Role: Listen, Parse, Fetch, and Display
+ */
 
+// 1. Initialize Speech Recognition (Cross-browser support)
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!SpeechRecognition) {
+    alert("Your browser does not support Web Speech API. Please use Chrome or Edge.");
+}
+
+const recognition = new SpeechRecognition();
 recognition.continuous = true;
 recognition.interimResults = true;
 recognition.lang = 'en-US';
 
-// 2. Select DOM Elements
+// 2. DOM Elements
 const startBtn = document.getElementById('start-btn');
 const clearBtn = document.getElementById('clear-btn');
 const liveText = document.getElementById('live-text');
@@ -17,72 +25,123 @@ const placeholder = document.querySelector('.placeholder-text');
 
 let isListening = false;
 
-// 3. Toggle Listening State
+// 3. Toggle Listening Functionality
 startBtn.addEventListener('click', () => {
     if (!isListening) {
-        recognition.start();
-        startBtn.textContent = "Stop Listening";
-        startBtn.style.background = "#ef4444"; // Red for stop
-        statusDot.classList.add('active');
+        try {
+            recognition.start();
+            updateUIState(true);
+        } catch (err) {
+            console.error("Speech recognition error:", err);
+        }
     } else {
         recognition.stop();
-        startBtn.textContent = "Start Listening";
-        startBtn.style.background = "#a855f7"; // Back to purple
-        statusDot.classList.remove('active');
+        updateUIState(false);
     }
     isListening = !isListening;
 });
 
-// 4. Handle Results
+function updateUIState(active) {
+    if (active) {
+        startBtn.textContent = "Stop Listening";
+        startBtn.style.background = "#ef4444"; // Red for "Stop"
+        statusDot.classList.add('active');
+        liveText.textContent = "Mic active. Speak a verse...";
+    } else {
+        startBtn.textContent = "Start Listening";
+        startBtn.style.background = "#a855f7"; // Purple for "Start"
+        statusDot.classList.remove('active');
+        liveText.textContent = "Listener paused.";
+    }
+}
+
+// 4. Handle Voice Results
 recognition.onresult = (event) => {
+    let finalTranscript = '';
     let interimTranscript = '';
+
     for (let i = event.resultIndex; i < event.results.length; ++i) {
         if (event.results[i].isFinal) {
-            const speech = event.results[i][0].transcript.toLowerCase();
-            detectScripture(speech);
+            finalTranscript += event.results[i][0].transcript;
+            processSpeech(finalTranscript.toLowerCase());
         } else {
             interimTranscript += event.results[i][0].transcript;
         }
     }
-    liveText.textContent = interimTranscript || "Listening...";
+    
+    // Show the "live" text so the user sees it's working
+    if (interimTranscript) {
+        liveText.textContent = interimTranscript;
+    }
 };
 
-// 5. Detect Scripture Pattern
-function detectScripture(text) {
-    // Regex to find patterns like "John 3:16" or "1 Corinthians 13:4"
-    const regex = /([1-3]?\s?[a-zA-Z]+)\s?(\d+):(\d+)/gi;
-    const match = regex.exec(text);
+// 5. Logic to Extract Scripture
+function processSpeech(text) {
+    // Pre-clean: Remove words that might trip up the API
+    // Converts "John chapter 3 verse 16" -> "John 3 16"
+    const cleanedText = text.replace(/chapter|verse|and/gi, " ");
+
+    // Regex for: (Optional 1-3) (Book Name) (Chapter Number) (Separator) (Verse Number)
+    // Matches: "John 3:16", "1 John 1:9", "Genesis 1 1", "Psalm 23 1"
+    const scriptureRegex = /([1-3]?\s?[a-zA-Z]+)\s?(\d+)\s?[:|\s]?\s?(\d+)/gi;
+    
+    const match = scriptureRegex.exec(cleanedText);
 
     if (match) {
-        const reference = match[0];
-        fetchVerse(reference);
+        const foundReference = match[0].trim();
+        fetchVerse(foundReference);
     }
 }
 
-// 6. Fetch from Bible API
-async function fetchVerse(ref) {
+// 6. API Fetch (Using Bible-API.com - KJV by default)
+async function fetchVerse(reference) {
+    liveText.textContent = `Searching for ${reference}...`;
+    
     try {
-        const response = await fetch(`https://bible-api.com/${ref}`);
+        // We add ?translation=kjv for the classic preacher feel
+        const response = await fetch(`https://bible-api.com/${reference}?translation=kjv`);
+        
+        if (!response.ok) throw new Error("Reference not found");
+
         const data = await response.json();
 
         if (data.text) {
-            placeholder.style.display = 'none';
-            referenceTitle.textContent = data.reference;
-            verseContent.textContent = data.text;
-            
-            // Add a nice fade-in effect
-            verseContent.style.opacity = 0;
-            setTimeout(() => verseContent.style.opacity = 1, 100);
+            displayVerse(data.reference, data.text);
         }
     } catch (error) {
-        console.error("Error fetching scripture:", error);
+        console.error("Fetch Error:", error);
+        liveText.textContent = `Could not find "${reference}".`;
     }
 }
 
-// 7. Clear Screen
+// 7. UI Display with Smooth Transition
+function displayVerse(ref, text) {
+    placeholder.style.display = 'none';
+    
+    // Quick fade out
+    verseContent.style.opacity = 0;
+    referenceTitle.style.opacity = 0;
+
+    setTimeout(() => {
+        referenceTitle.textContent = ref;
+        verseContent.textContent = text;
+        
+        // Fade back in
+        referenceTitle.style.opacity = 1;
+        verseContent.style.opacity = 1;
+        liveText.textContent = "Listening for next verse...";
+    }, 200);
+}
+
+// 8. Clear Button Logic
 clearBtn.addEventListener('click', () => {
     referenceTitle.textContent = "";
     verseContent.textContent = "";
     placeholder.style.display = 'block';
     liveText.textContent = "Screen Cleared.";
 });
+
+// Auto-restart recognition if it times out (common in long sermons)
+recognition.onend = () => {
+    if (isListening) recognition.start();
+};

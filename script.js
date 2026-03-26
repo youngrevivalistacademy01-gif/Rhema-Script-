@@ -1,7 +1,6 @@
 /**
- * Rhema Script - Final Pro Edition
- * Features: Natural Language Support (verse/chapter), Comma Sanitization, 
- * Interim Result Processing, and Automatic Restart.
+ * Rhema Script - Natural Language Engine
+ * High-performance extraction for "John Chapter 3 Verse 16" or "John 3,16"
  */
 
 const startBtn = document.getElementById('start-btn');
@@ -20,14 +19,12 @@ if (SpeechRecognition) {
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
-} else {
-    alert("Web Speech API is not supported in this browser. Please use Chrome on HTTPS.");
 }
 
 let isListening = false;
-let lastFetched = ""; // Memory to prevent double-pulling the same verse
+let lastFetched = ""; 
 
-// 1. Controls: Start/Stop
+// 1. UI Controls
 startBtn.addEventListener('click', () => {
     if (!isListening) {
         recognition.start();
@@ -43,49 +40,47 @@ startBtn.addEventListener('click', () => {
 function updateUI(active) {
     startBtn.textContent = active ? "Stop Listening" : "Start Listening";
     startBtn.style.background = active ? "#ef4444" : "#a855f7";
-    if (active) {
-        statusDot.classList.add('active');
-        liveText.textContent = "Waiting for the Word...";
-    } else {
-        statusDot.classList.remove('active');
-        liveText.textContent = "Listener paused.";
-    }
+    if (active) statusDot.classList.add('active'); else statusDot.classList.remove('active');
 }
 
-// 2. The Listener: Captures speech in real-time
+// 2. Real-time Listener
 recognition.onresult = (event) => {
     let transcript = "";
     for (let i = event.resultIndex; i < event.results.length; ++i) {
         transcript = event.results[i][0].transcript;
         liveText.textContent = transcript; 
-
-        // We process immediately to catch verses while the preacher is still talking
         processSpeech(transcript);
     }
 };
 
-// 3. The "Natural Language" Brain
+// 3. THE "HUMAN" ENGINE: This is the fix you needed
 function processSpeech(text) {
-    // CLEANING: Convert "Psalm chapter 11 verse 2" -> "psalm 11 2"
-    // Also removes commas and extra spaces
-    const clean = text.toLowerCase()
-                      .replace(/chapter|verse|and|,/gi, " ")
-                      .replace(/\s+/g, " ")
-                      .trim();
+    // Standardize: "John Chapter 3, Verse 16" -> "john chapter 3 verse 16"
+    const input = text.toLowerCase().replace(/,/g, " ");
 
-    // REGEX: Matches [Book Name] [Chapter] [Verse]
-    // Handles books like "1 John" and numbers separated by spaces or colons
-    const regex = /([1-3]?\s?[a-z]+)\s?(\d+)[\s|:]?\s?(\d+)/gi;
-    
-    let match;
-    while ((match = regex.exec(clean)) !== null) {
-        const book = match[1].trim();
-        const chapter = match[2];
-        const verse = match[3];
+    // List of Bible Books (Shortened for logic example, but covers most common)
+    const books = ["genesis", "exodus", "leviticus", "numbers", "deuteronomy", "joshua", "judges", "ruth", "samuel", "kings", "chronicles", "ezra", "nehemiah", "esther", "job", "psalms", "psalm", "proverbs", "ecclesiastes", "isaiah", "jeremiah", "lamentations", "ezekiel", "daniel", "hosea", "joel", "amos", "obadiah", "jonah", "micah", "nahum", "habakkuk", "zephaniah", "haggai", "zechariah", "malachi", "matthew", "mark", "luke", "john", "acts", "romans", "corinthians", "galatians", "ephesians", "philippians", "colossians", "thessalonians", "timothy", "titus", "philemon", "hebrews", "james", "peter", "jude", "revelation"];
+
+    // Step 1: Find if a book name is mentioned
+    let foundBook = books.find(book => input.includes(book));
+    if (!foundBook) return;
+
+    // Step 2: Extract all numbers in the order they were spoken
+    // This finds "3" and "16" even if "chapter" and "verse" are between them
+    const numbers = input.match(/\d+/g);
+
+    if (numbers && numbers.length >= 2) {
+        const chapter = numbers[0];
+        const verse = numbers[1];
         
-        const formattedRef = `${book} ${chapter}:${verse}`;
-        
-        // Only trigger if we haven't already pulled this exact verse
+        // Handle "1 John" or "2 Samuel" cases
+        let finalBook = foundBook;
+        if (input.includes(`1 ${foundBook}`)) finalBook = `1 ${foundBook}`;
+        if (input.includes(`2 ${foundBook}`)) finalBook = `2 ${foundBook}`;
+        if (input.includes(`3 ${foundBook}`)) finalBook = `3 ${foundBook}`;
+
+        const formattedRef = `${finalBook} ${chapter}:${verse}`;
+
         if (formattedRef !== lastFetched) {
             lastFetched = formattedRef;
             fetchVerse(formattedRef);
@@ -93,7 +88,7 @@ function processSpeech(text) {
     }
 }
 
-// 4. API Fetching: Pulls from Bible-API (KJV)
+// 4. Fetching Logic
 async function fetchVerse(ref) {
     try {
         const url = `https://bible-api.com/${encodeURIComponent(ref)}?translation=kjv`;
@@ -101,33 +96,22 @@ async function fetchVerse(ref) {
         const data = await response.json();
 
         if (data.text) {
-            // Visual Updates
             placeholder.style.display = 'none';
             referenceTitle.textContent = data.reference;
             verseContent.textContent = data.text;
-            
-            // Success Feedback
-            liveText.textContent = `Displaying ${data.reference}`;
-            console.log("Successfully displayed:", data.reference);
+            liveText.textContent = `Pushed: ${data.reference}`;
         }
     } catch (err) {
-        console.error("Fetch Error:", err);
+        console.error("API Error", err);
     }
 }
 
-// 5. Stability: Auto-restart if mic times out
-recognition.onend = () => {
-    if (isListening) {
-        console.log("Restarting mic for continued service...");
-        recognition.start();
-    }
-};
+recognition.onend = () => { if (isListening) recognition.start(); };
 
-// 6. Clear Screen
 clearBtn.addEventListener('click', () => {
     referenceTitle.textContent = "";
     verseContent.textContent = "";
     placeholder.style.display = 'block';
-    liveText.textContent = "Screen Cleared.";
-    lastFetched = ""; // Allow re-fetching the same verse if cleared
+    liveText.textContent = "Ready.";
+    lastFetched = "";
 });

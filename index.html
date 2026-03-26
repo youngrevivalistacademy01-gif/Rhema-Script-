@@ -17,7 +17,7 @@
 
         <section class="scripture-display glass-card">
             <div id="verse-output">
-                <p class="placeholder-text">Waiting for the Word...</p>
+                <p id="placeholder" class="placeholder-text">Waiting for the Word...</p>
                 <h2 id="reference-title"></h2>
                 <blockquote id="verse-content"></blockquote>
             </div>
@@ -25,13 +25,15 @@
 
         <section class="transcription-box glass-card">
             <p class="label">Live Listener</p>
-            <div id="live-text" class="scrolling-text">Listening for scripture references...</div>
+            <div class="scrolling-text">
+                <span id="live-text">Ready to listen...</span>
+            </div>
         </section>
 
         <footer class="controls glass-footer">
             <button id="start-btn" class="btn-primary">Start Listening</button>
             <button id="clear-btn" class="btn-secondary">Clear Screen</button>
-        </footer >
+        </footer>
     </main>
 
     <script src="script.js"></script>

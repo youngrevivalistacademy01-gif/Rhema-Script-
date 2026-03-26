@@ -1,9 +1,8 @@
 /**
- * Rhema Script - Final Stable Logic
- * Optimized for: GitHub Pages & Live Sermons
+ * Rhema Script - Bulletproof Logic
+ * Fixes: Comma errors, "Verse" keyword hang-ups, and Interim processing
  */
 
-// 1. DOM Elements (Matching your Fixed HTML IDs)
 const startBtn = document.getElementById('start-btn');
 const clearBtn = document.getElementById('clear-btn');
 const liveText = document.getElementById('live-text');
@@ -12,31 +11,24 @@ const referenceTitle = document.getElementById('reference-title');
 const statusDot = document.getElementById('status-indicator');
 const placeholder = document.getElementById('placeholder');
 
-// 2. Initialize Speech Recognition
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition;
 
 if (SpeechRecognition) {
     recognition = new SpeechRecognition();
     recognition.continuous = true;
-    recognition.interimResults = true;
+    recognition.interimResults = true; // Still true for the UI
     recognition.lang = 'en-US';
-} else {
-    alert("Speech API not supported. Please use Chrome/Edge on HTTPS.");
 }
 
 let isListening = false;
 
-// 3. Toggle Button Logic
+// 1. Start/Stop
 startBtn.addEventListener('click', () => {
     if (!isListening) {
-        try {
-            recognition.start();
-            isListening = true;
-            updateUI(true);
-        } catch (err) {
-            console.error("Mic error:", err);
-        }
+        recognition.start();
+        isListening = true;
+        updateUI(true);
     } else {
         recognition.stop();
         isListening = false;
@@ -45,82 +37,75 @@ startBtn.addEventListener('click', () => {
 });
 
 function updateUI(active) {
-    if (active) {
-        startBtn.textContent = "Stop Listening";
-        startBtn.style.background = "#ef4444"; // Red
-        statusDot.classList.add('active');
-        liveText.textContent = "Listening for the Word...";
-    } else {
-        startBtn.textContent = "Start Listening";
-        startBtn.style.background = "#a855f7"; // Purple
-        statusDot.classList.remove('active');
-        liveText.textContent = "Listener paused.";
-    }
+    startBtn.textContent = active ? "Stop Listening" : "Start Listening";
+    startBtn.style.background = active ? "#ef4444" : "#a855f7";
+    if (active) statusDot.classList.add('active'); else statusDot.classList.remove('active');
+    liveText.textContent = active ? "Waiting..." : "Paused.";
 }
 
-// 4. Handle Results
+// 2. The Logic Fix: Process speech as it happens
 recognition.onresult = (event) => {
-    let interimTranscript = '';
+    let transcript = "";
     for (let i = event.resultIndex; i < event.results.length; ++i) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-            processSpeech(transcript);
-        } else {
-            interimTranscript += transcript;
-        }
+        transcript = event.results[i][0].transcript;
+        liveText.textContent = transcript; // Show what is heard immediately
+
+        // CRITICAL: We process BOTH final and interim to catch "Genesis 1:1" faster
+        processSpeech(transcript);
     }
-    liveText.textContent = interimTranscript || "Processing...";
 };
 
-// 5. Advanced Scripture Detection
+// 3. The Pattern Fix: Clean and Detect
+let lastFetched = ""; // Prevent double-fetching the same verse
+
 function processSpeech(text) {
-    // Clean text: "John chapter 3 verse 16" -> "john 3 16"
+    // CLEANING: Remove commas, replace "verse/chapter" with spaces, lowercase it
     const clean = text.toLowerCase()
+                      .replace(/,/g, " ") 
                       .replace(/chapter|verse|and|the/gi, " ")
                       .replace(/\s+/g, " ")
                       .trim();
 
-    // Pattern: [Book] [Chapter] [Verse]
+    // REGEX: Matches "genesis 1 1" or "genesis 1:1"
     const regex = /([1-3]?\s?[a-z]+)\s?(\d+)[\s|:]?\s?(\d+)/gi;
-    
-    let match;
-    while ((match = regex.exec(clean)) !== null) {
+    const match = regex.exec(clean);
+
+    if (match) {
         const ref = `${match[1].trim()} ${match[2]}:${match[3]}`;
-        fetchVerse(ref);
+        
+        // Only fetch if it's a new reference to avoid spamming the API
+        if (ref !== lastFetched) {
+            lastFetched = ref;
+            fetchVerse(ref);
+        }
     }
 }
 
-// 6. Fetch from API
+// 4. The Fetch Fix: URL Encoding
 async function fetchVerse(ref) {
-    liveText.textContent = `Searching: ${ref}`;
     try {
+        // Use encodeURIComponent to handle "1 John" or spaces correctly
         const url = `https://bible-api.com/${encodeURIComponent(ref)}?translation=kjv`;
         const response = await fetch(url);
         const data = await response.json();
 
         if (data.text) {
-            // Hide placeholder and show verse
             placeholder.style.display = 'none';
             referenceTitle.textContent = data.reference;
             verseContent.textContent = data.text;
-            liveText.textContent = "Word found!";
+            liveText.textContent = `Displayed: ${data.reference}`;
         }
     } catch (err) {
-        liveText.textContent = "Error finding verse.";
+        console.error("Fetch Error:", err);
     }
 }
 
-// 7. Auto-Restart Loop
-recognition.onend = () => {
-    if (isListening) recognition.start();
-};
+recognition.onend = () => { if (isListening) recognition.start(); };
 
-// 8. Clear Button
 clearBtn.addEventListener('click', () => {
     referenceTitle.textContent = "";
     verseContent.textContent = "";
     placeholder.style.display = 'block';
-    liveText.textContent = "Screen Cleared.";
+    liveText.textContent = "Cleared.";
+    lastFetched = ""; // Reset memory
 });
-
-

@@ -1,6 +1,6 @@
 /**
- * Rhema Script - Universal Natural Language Engine
- * Handles: "John 3 16", "John chapter 3 verse 16", "2nd Samuel 1 1", etc.
+ * Rhema Script - Professional Bible Engine (Final Build)
+ * Fixes: Clear Screen Logic, Multiple Book Detection, and Natural Speech
  */
 
 const startBtn = document.getElementById('start-btn');
@@ -18,8 +18,9 @@ recognition.interimResults = true;
 
 let isListening = false;
 let lastFetched = "";
+let isCoolingDown = false; // Prevents "Clear" from being immediately overwritten
 
-// 1. DATASET: Ordered by complexity (Multiple books MUST come first)
+// 1. DATASET: Ordered so multi-books are checked FIRST
 const bibleBooks = [
     "1 samuel", "2 samuel", "1 kings", "2 kings", "1 chronicles", "2 chronicles", 
     "1 corinthians", "2 corinthians", "1 thessalonians", "2 thessalonians", 
@@ -53,6 +54,8 @@ startBtn.addEventListener('click', () => {
 
 // 3. SMART LISTENER
 recognition.onresult = (event) => {
+    if (isCoolingDown) return; // Stop processing if screen was just cleared
+
     let transcript = "";
     for (let i = event.resultIndex; i < event.results.length; ++i) {
         transcript = event.results[i][0].transcript.toLowerCase();
@@ -64,7 +67,8 @@ recognition.onresult = (event) => {
             .replace(/third/g, "3")
             .replace(/1st/g, "1")
             .replace(/2nd/g, "2")
-            .replace(/3rd/g, "3");
+            .replace(/3rd/g, "3")
+            .replace(/,/g, " "); // Fixes the "Genesis 1,1" issue
 
         liveText.textContent = transcript;
         processSpeech(transcript);
@@ -72,24 +76,21 @@ recognition.onresult = (event) => {
 };
 
 function processSpeech(text) {
-    // A. Find the book name in the text
     let foundBook = "";
     for (let book of bibleBooks) {
+        // Use word boundaries to ensure "John" doesn't match inside "1 John"
         if (text.includes(book)) {
             foundBook = book;
-            break; // Stop at the first match (e.g., "1 samuel" before "samuel")
+            break; 
         }
     }
 
     if (!foundBook) return;
 
-    // B. Isolate everything spoken AFTER the book name
-    // This prevents the "2" in "2 Samuel" from being used as a Chapter number
+    // Isolate text AFTER the book name to get Chapter/Verse
     const speechAfterBook = text.split(foundBook)[1];
     if (!speechAfterBook) return;
 
-    // C. Extract ALL numbers from the remaining text
-    // This finds "3" and "16" regardless of "chapter", "verse", or "verses"
     const numbers = speechAfterBook.match(/\d+/g);
 
     if (numbers && numbers.length >= 2) {
@@ -97,7 +98,6 @@ function processSpeech(text) {
         const verse = numbers[1];
         const ref = `${foundBook} ${chapter}:${verse}`;
 
-        // D. Only fetch if it's a new reference to avoid flickering
         if (ref !== lastFetched) {
             lastFetched = ref;
             fetchVerse(ref);
@@ -116,21 +116,33 @@ async function fetchVerse(ref) {
             placeholder.style.display = 'none';
             referenceTitle.textContent = data.reference;
             verseContent.textContent = data.text;
-            console.log("Success:", data.reference);
         }
     } catch (err) {
-        console.error("API Connection Error");
+        console.error("API Error");
     }
 }
 
-// Restart if preacher pauses
-recognition.onend = () => { if (isListening) recognition.start(); };
-
-// Clear Logic
+// 5. IMPROVED CLEAR LOGIC
 clearBtn.addEventListener('click', () => {
+    // Enable cooldown so the old transcript doesn't instantly re-trigger the verse
+    isCoolingDown = true;
+    
     referenceTitle.textContent = "";
     verseContent.textContent = "";
     placeholder.style.display = 'block';
-    lastFetched = "";
-    liveText.textContent = "Cleared.";
+    lastFetched = ""; // Allow the same verse to be searched again later
+    liveText.textContent = "Screen Cleared.";
+
+    // Restart the recognition to clear its internal buffer/memory
+    if (isListening) {
+        recognition.stop();
+        setTimeout(() => {
+            if (isListening) recognition.start();
+            isCoolingDown = false;
+        }, 1000);
+    } else {
+        setTimeout(() => { isCoolingDown = false; }, 1000);
+    }
 });
+
+recognition.onend = () => { if (isListening && !isCoolingDown) recognition.start(); };

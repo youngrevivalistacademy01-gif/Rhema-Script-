@@ -1,6 +1,6 @@
 /**
- * Rhema Script - Perceptive Preacher Edition
- * Fixes: Long pauses, unclear book pronunciation, and multiple book logic.
+ * Rhema Script - Ultimate Edition
+ * Fixes: Word-based numbers (one, two, etc.), Long pauses, and Multiple books.
  */
 
 const startBtn = document.getElementById('start-btn');
@@ -13,15 +13,12 @@ const placeholder = document.getElementById('placeholder');
 
 const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
 let recognition = new SpeechRecognition();
-
-// CRITICAL: Keep results continuous so pauses don't break the sentence
 recognition.continuous = true;
 recognition.interimResults = true;
-recognition.lang = 'en-US';
 
 let isListening = false;
 let lastFetched = "";
-let sessionTranscript = ""; // Accumulates speech to handle long pauses
+let sessionTranscript = ""; 
 
 const bibleBooks = [
     "1 samuel", "2 samuel", "1 kings", "2 kings", "1 chronicles", "2 chronicles", 
@@ -37,23 +34,31 @@ const bibleBooks = [
     "peter", "jude", "revelation"
 ];
 
+// Map for word-to-number conversion
+const wordToNum = {
+    'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
+    'eleven': 11, 'twelve': 12, 'thirteen': 13, 'fourteen': 14, 'fifteen': 15, 'sixteen': 16, 'seventeen': 17, 
+    'eighteen': 18, 'nineteen': 19, 'twenty': 20, 'thirty': 30, 'forty': 40, 'fifty': 50
+};
+
 // 1. Controls
 startBtn.addEventListener('click', () => {
     if (!isListening) {
         recognition.start();
         isListening = true;
-        startBtn.textContent = "Stop Listening";
-        startBtn.style.background = "#ef4444";
-        statusDot.classList.add('active');
+        updateUI(true);
     } else {
         recognition.stop();
         isListening = false;
-        startBtn.textContent = "Start Listening";
-        startBtn.style.background = "#a855f7";
-        statusDot.classList.remove('active');
-        sessionTranscript = ""; 
+        updateUI(false);
     }
 });
+
+function updateUI(active) {
+    startBtn.textContent = active ? "Stop Listening" : "Start Listening";
+    startBtn.style.background = active ? "#ef4444" : "#a855f7";
+    if (active) statusDot.classList.add('active'); else statusDot.classList.remove('active');
+}
 
 // 2. The Smart Listener
 recognition.onresult = (event) => {
@@ -66,74 +71,55 @@ recognition.onresult = (event) => {
             interim = text;
         }
     }
-
-    // Combine long-term memory with current speaking for matching
     const fullText = (sessionTranscript + " " + interim).trim();
-    liveText.textContent = fullText.split(' ').slice(-10).join(' '); // Show last 10 words
-    
+    liveText.textContent = fullText;
     processSpeech(fullText);
 };
 
 function processSpeech(text) {
-    // A. Clean and Normalize
-    const clean = text.replace(/first/g, "1").replace(/second/g, "2").replace(/third/g, "3")
-                      .replace(/1st/g, "1").replace(/2nd/g, "2").replace(/3rd/g, "3")
-                      .replace(/,/g, " ").replace(/chapter|verse|verses|and/gi, " ");
-
-    // B. Smart Book Match (Handles slight mispronunciations)
-    let foundBook = "";
-    for (let book of bibleBooks) {
-        // Using "includes" allows for "revelations" to match "revelation"
-        if (clean.includes(book)) {
-            foundBook = book;
-            break;
-        }
+    // A. Convert word-numbers to digits (e.g., "six" -> "6")
+    let processedText = text.toLowerCase();
+    for (let word in wordToNum) {
+        let reg = new RegExp(`\\b${word}\\b`, 'g');
+        processedText = processedText.replace(reg, wordToNum[word]);
     }
 
+    // B. Clean filler words
+    const clean = processedText.replace(/first/g, "1").replace(/second/g, "2").replace(/third/g, "3")
+                               .replace(/,/g, " ").replace(/chapter|verse|verses|and/gi, " ");
+
+    // C. Book Match
+    let foundBook = bibleBooks.find(book => clean.includes(book));
     if (!foundBook) return;
 
-    // C. Number Extraction from the whole session
+    // D. Extract Numbers
     const parts = clean.split(foundBook);
-    const afterBook = parts[parts.length - 1]; // Look at the most recent mention
-    
+    const afterBook = parts[parts.length - 1];
     const numbers = afterBook.match(/\d+/g);
 
     if (numbers && numbers.length >= 2) {
-        const chapter = numbers[0];
-        const verse = numbers[1];
-        const ref = `${foundBook} ${chapter}:${verse}`;
-
+        const ref = `${foundBook} ${numbers[0]}:${numbers[1]}`;
         if (ref !== lastFetched) {
             lastFetched = ref;
             fetchVerse(ref);
-            // Clear session transcript after a successful fetch to keep it fresh
-            sessionTranscript = ""; 
         }
     }
 }
 
-// 3. API Engine
 async function fetchVerse(ref) {
     try {
         const url = `https://bible-api.com/${encodeURIComponent(ref)}?translation=kjv`;
         const response = await fetch(url);
         const data = await response.json();
-
         if (data.text) {
             placeholder.style.display = 'none';
             referenceTitle.textContent = data.reference;
             verseContent.textContent = data.text;
-            
-            // Smoothly show content
-            verseContent.style.opacity = 0;
-            setTimeout(() => { verseContent.style.opacity = 1; }, 50);
+            sessionTranscript = ""; // Clear memory after success
         }
-    } catch (err) {
-        console.error("API Error");
-    }
+    } catch (err) { console.error("API Error"); }
 }
 
-// 4. Clear Logic
 clearBtn.addEventListener('click', () => {
     referenceTitle.textContent = "";
     verseContent.textContent = "";
